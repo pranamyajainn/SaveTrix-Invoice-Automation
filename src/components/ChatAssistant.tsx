@@ -110,8 +110,8 @@ export const ChatAssistant: React.FC<Props> = ({ invoiceData }) => {
             {/* Drawer Header */}
             <div className="bg-[#1A1A1A] p-6 text-white flex items-center justify-between shadow-lg">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-savetrix-orange rounded-xl flex items-center justify-center shadow-lg shadow-savetrix-orange/20">
-                  <Zap className="text-white fill-current" size={20} />
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden">
+                  <img src="https://api.dicebear.com/7.x/shapes/svg?seed=savetrix" alt="SaveTrix Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                 </div>
                 <div>
                   <h3 className="font-bold text-sm tracking-tight">Invoice Assistant</h3>

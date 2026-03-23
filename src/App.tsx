@@ -154,8 +154,8 @@ export default function App() {
 
         <div className={`p-8 ${isSidebarCollapsed ? 'px-2.5' : 'p-8'} transition-all`}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-savetrix-orange rounded-xl flex items-center justify-center shadow-lg shadow-savetrix-orange/20 shrink-0">
-              <Zap className="text-white fill-current" size={24} />
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 overflow-hidden">
+              <img src="https://api.dicebear.com/7.x/shapes/svg?seed=savetrix" alt="SaveTrix Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
             </div>
             {!isSidebarCollapsed && (
               <span className="text-2xl font-bold text-white tracking-tight whitespace-nowrap overflow-hidden">SaveTrix</span>

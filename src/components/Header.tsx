@@ -5,8 +5,8 @@ export const Header: React.FC = () => {
     <header className="bg-white border-b border-gray-100 sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-savetrix-orange rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-orange-200">
-            S
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden">
+            <img src="https://api.dicebear.com/7.x/shapes/svg?seed=savetrix" alt="SaveTrix Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
           </div>
           <div>
             <h1 className="text-xl font-bold tracking-tight text-savetrix-charcoal">SaveTrix</h1>

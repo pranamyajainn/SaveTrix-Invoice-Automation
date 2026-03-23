@@ -59,6 +59,8 @@ export async function extractInvoiceData(base64Data: string, mimeType: string): 
             invoiceNumber: { type: Type.STRING },
             invoiceDate: { type: Type.STRING },
             dueDate: { type: Type.STRING },
+            isReceipt: { type: Type.BOOLEAN },
+            documentType: { type: Type.STRING },
             lineItems: {
               type: Type.ARRAY,
               items: {
@@ -88,7 +90,7 @@ export async function extractInvoiceData(base64Data: string, mimeType: string): 
               required: ["vendorName", "totalAmount"]
             }
           },
-          required: ["vendorName", "totalAmount", "currency", "confidence"]
+          required: ["vendorName", "totalAmount", "currency", "confidence", "isReceipt", "documentType"]
         }
       }
     });
@@ -98,9 +100,40 @@ export async function extractInvoiceData(base64Data: string, mimeType: string): 
     
     const data = JSON.parse(text) as InvoiceData;
     
-    // Normalize dates
+    // Step 1 & 2: Normalize dates with receipt logic
     data.invoiceDate = normalizeDate(data.invoiceDate);
-    data.dueDate = normalizeDate(data.dueDate);
+    
+    // If it's a receipt (either by flag or type), ensure dueDate is empty
+    const isReceipt = data.isReceipt || data.documentType === 'receipt';
+    data.isReceipt = isReceipt; // Sync the flag
+
+    if (isReceipt) {
+      data.dueDate = '';
+      if (!data.paymentTerms || data.paymentTerms.trim().toLowerCase() === 'null' || data.paymentTerms === 'N/A') {
+        data.paymentTerms = 'Paid at Point of Sale';
+      }
+    } else {
+      data.dueDate = normalizeDate(data.dueDate);
+    }
+    
+    // Step 4: Currency fix - default to USD if null or invalid
+    // If it's "UD", it's likely a truncation error from the model or symbol inference
+    if (!data.currency || data.currency.trim().toLowerCase() === 'null' || data.currency.trim() === 'UD') {
+      data.currency = 'USD';
+    }
+    
+    // Ensure it's at least 3 chars if it's a standard currency code
+    if (data.currency.length < 3 && data.currency.length > 0) {
+      // If it's "U", "US", "UD", etc.
+      if (['U', 'US', 'UD'].includes(data.currency.toUpperCase())) {
+        data.currency = 'USD';
+      }
+    }
+
+    // Step 5: Payment terms fix
+    if (!data.paymentTerms || data.paymentTerms.trim().toLowerCase() === 'null') {
+      data.paymentTerms = 'N/A';
+    }
     
     return data;
   } catch (error) {

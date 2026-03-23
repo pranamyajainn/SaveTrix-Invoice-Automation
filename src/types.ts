@@ -22,6 +22,8 @@ export interface InvoiceData {
   currency: string;
   paymentTerms?: string;
   vendorAddress?: string;
+  isReceipt?: boolean;
+  documentType?: 'invoice' | 'receipt' | 'purchase_order' | 'credit_note' | 'other';
   confidence: {
     [key: string]: number; // 0 to 1
   };

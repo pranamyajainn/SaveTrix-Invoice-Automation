@@ -4,6 +4,7 @@ import { AlertCircle, Download, Save } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { motion } from 'motion/react';
+import { isNullLike, normalizeDate } from '../utils/dateUtils';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -122,6 +123,7 @@ export const ExtractionForm: React.FC<Props> = ({ data, onChange, onConfirm, onE
             value={data.dueDate} 
             onChange={(v) => handleChange('dueDate', v)}
             isWarning={isLowConfidence('dueDate')}
+            isReceipt={data.isReceipt}
           />
         </motion.div>
         <motion.div variants={item}>
@@ -137,6 +139,7 @@ export const ExtractionForm: React.FC<Props> = ({ data, onChange, onConfirm, onE
             label="Payment Terms" 
             value={data.paymentTerms || ''} 
             onChange={(v) => handleChange('paymentTerms', v)}
+            isReceipt={data.isReceipt}
           />
         </motion.div>
       </div>
@@ -161,15 +164,22 @@ export const ExtractionForm: React.FC<Props> = ({ data, onChange, onConfirm, onE
                 <tr key={idx} className="group hover:bg-gray-50/50 transition-colors">
                   <td className="px-6 py-4">
                     <input 
-                      className="w-full bg-transparent focus:ring-0 border-none p-0 font-medium text-savetrix-charcoal"
-                      value={item.description || ''}
+                      className={cn(
+                        "w-full bg-transparent focus:ring-0 border-none p-1 font-medium text-savetrix-charcoal rounded",
+                        isNullLike(item.description) && "bg-orange-50 ring-1 ring-orange-200"
+                      )}
+                      value={isNullLike(item.description) ? '' : item.description}
                       onChange={(e) => handleLineItemChange(idx, 'description', e.target.value)}
+                      placeholder="Description"
                     />
                   </td>
                   <td className="px-6 py-4">
                     <input 
                       type="number"
-                      className="w-full bg-transparent focus:ring-0 border-none p-0 text-gray-500"
+                      className={cn(
+                        "w-full bg-transparent focus:ring-0 border-none p-1 text-gray-500 rounded",
+                        (!item.quantity || item.quantity === 0) && "bg-orange-50 ring-1 ring-orange-200"
+                      )}
                       value={item.quantity || 0}
                       onChange={(e) => handleLineItemChange(idx, 'quantity', parseFloat(e.target.value))}
                     />
@@ -177,7 +187,10 @@ export const ExtractionForm: React.FC<Props> = ({ data, onChange, onConfirm, onE
                   <td className="px-6 py-4">
                     <input 
                       type="number"
-                      className="w-full bg-transparent focus:ring-0 border-none p-0 text-gray-500"
+                      className={cn(
+                        "w-full bg-transparent focus:ring-0 border-none p-1 text-gray-500 rounded",
+                        (!item.unitPrice || item.unitPrice === 0) && "bg-orange-50 ring-1 ring-orange-200"
+                      )}
                       value={item.unitPrice || 0}
                       onChange={(e) => handleLineItemChange(idx, 'unitPrice', parseFloat(e.target.value))}
                     />
@@ -235,15 +248,34 @@ interface FieldProps {
   onChange: (val: string) => void;
   type?: string;
   isWarning?: boolean;
+  isReceipt?: boolean;
 }
 
-const FormField: React.FC<FieldProps> = ({ label, value, onChange, type = 'text', isWarning }) => {
+const FormField: React.FC<FieldProps> = ({ label, value, onChange, type = 'text', isWarning, isReceipt }) => {
   const [displayValue, setDisplayValue] = React.useState('');
   
+  // Bug 2: Ensure date values are normalized to YYYY-MM-DD before display
+  const normalizedValue = type === 'date' ? normalizeDate(value) : value;
+  
+  // Step 3: Null handling - if value is null-like, treat as empty string
+  const safeValue = isNullLike(normalizedValue) ? '' : normalizedValue;
+  const isMissing = isNullLike(normalizedValue);
+
+  // Suppress warning for Due Date and Payment Terms if it's a receipt
+  const isIrrelevantForReceipt = isReceipt && (label === 'Due Date' || label === 'Payment Terms');
+  const shouldShowWarning = isIrrelevantForReceipt ? false : (isWarning || isMissing);
+  const shouldShowMissingBadge = isIrrelevantForReceipt ? false : isMissing;
+
   // Typewriter effect
   React.useEffect(() => {
+    // Bug 2: Disable typewriter for date inputs to ensure browser validation
+    if (type === 'date') {
+      setDisplayValue(String(safeValue || ''));
+      return;
+    }
+
     let i = 0;
-    const target = String(value || '');
+    const target = String(safeValue || '');
     setDisplayValue('');
     const timer = setInterval(() => {
       if (i < target.length) {
@@ -254,27 +286,37 @@ const FormField: React.FC<FieldProps> = ({ label, value, onChange, type = 'text'
       }
     }, 20);
     return () => clearInterval(timer);
-  }, [value]);
+  }, [safeValue, type]);
 
   return (
     <div className="space-y-3">
       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
         {label}
-        {isWarning && <AlertCircle size={14} className="text-savetrix-orange" />}
+        {shouldShowWarning && <AlertCircle size={14} className={cn(isMissing ? "text-orange-400" : "text-savetrix-orange")} />}
       </label>
       <div className="relative group">
         <input 
           type={type}
           value={displayValue}
           onChange={(e) => onChange(e.target.value)}
+          placeholder={isReceipt && label === 'Due Date' ? 'N/A - Receipt' : (type === 'date' ? '' : `Enter ${label}...`)}
           className={cn(
             "w-full px-6 py-4 rounded-2xl border text-lg font-bold transition-all outline-none",
-            isWarning 
-              ? "border-savetrix-orange/30 bg-savetrix-orange/[0.02] text-savetrix-orange animate-pulse-orange" 
-              : "border-gray-100 bg-white text-savetrix-charcoal focus:border-savetrix-orange focus:shadow-xl focus:shadow-savetrix-orange/5"
+            shouldShowMissingBadge
+              ? "border-orange-300 bg-orange-50/30 text-savetrix-charcoal placeholder:text-orange-200"
+              : (isWarning && !isReceipt) 
+                ? "border-savetrix-orange/30 bg-savetrix-orange/[0.02] text-savetrix-orange animate-pulse-orange" 
+                : "border-gray-100 bg-white text-savetrix-charcoal focus:border-savetrix-orange focus:shadow-xl focus:shadow-savetrix-orange/5"
           )}
         />
-        {isWarning && (
+        {shouldShowMissingBadge && (
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+            <span className="text-[10px] font-black text-orange-400 bg-orange-50 px-2 py-1 rounded uppercase tracking-widest">
+              Manual Entry Req.
+            </span>
+          </div>
+        )}
+        {isWarning && !shouldShowMissingBadge && !isReceipt && (
           <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
             <span className="text-[10px] font-black text-savetrix-orange bg-savetrix-orange/10 px-2 py-1 rounded uppercase tracking-widest">
               Low Confidence
